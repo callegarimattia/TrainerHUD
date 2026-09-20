@@ -128,6 +128,7 @@ final class Session {
             state.showToast(state.timerRunning ? "Timer running" : "Timer paused", seconds: 1.5)
         case .resetRide: state.resetRide()
         case .toggleOverlay: overlay?.toggleVisible()
+        case .minimizeOverlay: settings.overlayMinimized.toggle()
         case .toggleErg: setErg(enabled: state.mode != .erg)
         case .ergUp: setErgTarget(state.ergTarget + 5)
         case .ergDown: setErgTarget(state.ergTarget - 5)

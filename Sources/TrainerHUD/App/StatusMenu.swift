@@ -57,7 +57,10 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
 
         menu.addItem(make(session.settings.overlayVisible ? "Hide Overlay" : "Show Overlay", #selector(toggleOverlay), key: "h", mask: [.command]))
-        menu.addItem(make(session.settings.overlayLocked ? "Unlock Overlay (move it)" : "Lock Overlay (click-through)", #selector(toggleLock), key: "l", mask: [.command]))
+        menu.addItem(make(session.settings.overlayMinimized ? "Expand Overlay" : "Minimize Overlay", #selector(toggleMinimize), key: "m", mask: [.command]))
+        let ct = make("Click-through (ignore mouse)", #selector(toggleLock), key: "l", mask: [.command])
+        ct.state = session.settings.overlayLocked ? .on : .off
+        menu.addItem(ct)
         menu.addItem(make("Reset Overlay Position", #selector(resetPosition), key: "", mask: []))
         menu.addItem(.separator())
         menu.addItem(make("Settings…", #selector(openSettings), key: ",", mask: [.command]))
@@ -137,6 +140,7 @@ final class StatusMenuController: NSObject, NSMenuDelegate {
     @objc private func resetRide() { session.state.resetRide() }
     @objc private func toggleOverlay() { overlay.toggleVisible() }
     @objc private func toggleLock() { overlay.applyLock(!session.settings.overlayLocked) }
+    @objc private func toggleMinimize() { session.settings.overlayMinimized.toggle() }
     @objc private func resetPosition() { overlay.centerTop() }
     @objc private func openSettings() { settingsWindow.show() }
     @objc private func openLog() { logWindow.show() }

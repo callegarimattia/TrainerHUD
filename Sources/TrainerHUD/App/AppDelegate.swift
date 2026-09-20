@@ -18,7 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // trainerhud://shift-up | shift-down | gear/12 | grade/+0.5 | grade/3 | erg/on | erg/off | erg/220
-    //            | timer/toggle | ride/reset | overlay/toggle | overlay/lock | overlay/unlock
+    //            | timer/toggle | ride/reset | overlay/toggle | overlay/minimize | overlay/expand | overlay/lock | overlay/unlock
     private func handle(_ url: URL) {
         guard let session, url.scheme == "trainerhud" else { return }
         let host = url.host ?? ""
@@ -41,6 +41,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch arg {
             case "lock": overlay.applyLock(true)
             case "unlock": overlay.applyLock(false)
+            case "minimize": session.settings.overlayMinimized = true
+            case "expand": session.settings.overlayMinimized = false
             case "show": overlay.setVisible(true)
             case "hide": overlay.setVisible(false)
             default: overlay.toggleVisible()

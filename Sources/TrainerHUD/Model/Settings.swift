@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 enum ButtonAction: String, CaseIterable, Codable {
-    case none, shiftUp, shiftDown, gradeUp, gradeDown, gradeReset, toggleTimer, resetRide, toggleOverlay, toggleErg, ergUp, ergDown
+    case none, shiftUp, shiftDown, gradeUp, gradeDown, gradeReset, toggleTimer, resetRide, toggleOverlay, minimizeOverlay, toggleErg, ergUp, ergDown
 
     var label: String {
         switch self {
@@ -15,6 +15,7 @@ enum ButtonAction: String, CaseIterable, Codable {
         case .toggleTimer: return "Pause / resume timer"
         case .resetRide: return "Reset ride"
         case .toggleOverlay: return "Show / hide overlay"
+        case .minimizeOverlay: return "Minimize / expand overlay"
         case .toggleErg: return "Toggle ERG mode"
         case .ergUp: return "ERG target +5 W"
         case .ergDown: return "ERG target −5 W"
@@ -74,6 +75,7 @@ final class Settings: ObservableObject {
     @Published var overlayScale: Double { didSet { save() } }
     @Published var overlayOpacity: Double { didSet { save() } }
     @Published var overlayLocked: Bool { didSet { save() } }
+    @Published var overlayMinimized: Bool { didSet { save() } }
     @Published var overlayVisible: Bool { didSet { save() } }
     @Published var overlayFrame: CGRect? { didSet { save() } }
     @Published var showPower: Bool { didSet { save() } }
@@ -119,7 +121,8 @@ final class Settings: ObservableObject {
 
         overlayScale = dbl("overlayScale", 1.0)
         overlayOpacity = dbl("overlayOpacity", 0.85)
-        overlayLocked = bool("overlayLocked", true)
+        overlayLocked = bool("overlayClickThrough", false)
+        overlayMinimized = bool("overlayMinimized", false)
         overlayVisible = bool("overlayVisible", true)
         if let arr = d.array(forKey: "overlayFrame") as? [Double], arr.count == 4 {
             overlayFrame = CGRect(x: arr[0], y: arr[1], width: arr[2], height: arr[3])
@@ -174,7 +177,8 @@ final class Settings: ObservableObject {
         d.set(ergTargetWatts, forKey: "ergTargetWatts")
         d.set(overlayScale, forKey: "overlayScale")
         d.set(overlayOpacity, forKey: "overlayOpacity")
-        d.set(overlayLocked, forKey: "overlayLocked")
+        d.set(overlayLocked, forKey: "overlayClickThrough")
+        d.set(overlayMinimized, forKey: "overlayMinimized")
         d.set(overlayVisible, forKey: "overlayVisible")
         if let f = overlayFrame {
             d.set([f.origin.x, f.origin.y, f.width, f.height], forKey: "overlayFrame")

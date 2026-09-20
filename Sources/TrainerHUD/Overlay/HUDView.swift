@@ -4,11 +4,23 @@ struct HUDView: View {
     @ObservedObject var state: RideState
     @ObservedObject var settings: Settings
     var controllerLabel: (String) -> String
+    var onQuit: () -> Void = {}
+    @State private var hovering = false
     private let clockTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var scale: CGFloat { CGFloat(settings.overlayScale) }
 
     var body: some View {
+        Group {
+            if settings.overlayMinimized { minimized } else { expanded }
+        }
+        .onHover { hovering = $0 }
+        .onReceive(clockTimer) { now in clock = now }
+    }
+
+    private var chrome: some ShapeStyle { Color.black.opacity(settings.overlayOpacity) }
+
+    private var expanded: some View {
         VStack(spacing: 4 * scale) {
             HStack(spacing: 14 * scale) {
                 if settings.showPower {
@@ -53,18 +65,77 @@ struct HUDView: View {
         }
         .padding(.horizontal, 16 * scale)
         .padding(.vertical, 8 * scale)
-        .background(
-            RoundedRectangle(cornerRadius: 14 * scale, style: .continuous)
-                .fill(Color.black.opacity(settings.overlayOpacity))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14 * scale, style: .continuous)
-                .strokeBorder(settings.overlayLocked ? Color.white.opacity(0.08) : Color.yellow.opacity(0.9), lineWidth: settings.overlayLocked ? 1 : 2)
-        )
-        .fixedSize()
-        .onReceive(clockTimer) { now in
-            clock = now
+        .padding(.top, hovering ? 10 * scale : 0)
+        .background(RoundedRectangle(cornerRadius: 14 * scale, style: .continuous).fill(chrome))
+        .overlay(alignment: .topTrailing) { if hovering { toolbar } }
+        .overlay(alignment: .top) {
+            if hovering {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 9 * scale, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.35))
+                    .padding(.top, 3 * scale)
+            }
         }
+        .fixedSize()
+    }
+
+    private var minimized: some View {
+        HStack(spacing: 10 * scale) {
+            if settings.showGear {
+                HStack(spacing: 3 * scale) {
+                    Image(systemName: "gearshape.fill").font(.system(size: 10 * scale)).foregroundStyle(.cyan.opacity(0.8))
+                    Text("\(state.gearIndex + 1)").foregroundStyle(.cyan)
+                }
+            }
+            if settings.showPower {
+                Text("\(state.power3s)") + Text(" W").font(.system(size: 9 * scale, weight: .medium, design: .rounded)).foregroundStyle(.white.opacity(0.6))
+            }
+            if settings.showHeartRate {
+                HStack(spacing: 2 * scale) {
+                    Image(systemName: "heart.fill").font(.system(size: 9 * scale)).foregroundStyle(hrColor)
+                    Text(state.heartRate > 0 ? "\(state.heartRate)" : "--").foregroundStyle(hrColor)
+                }
+            }
+            if settings.showTime {
+                Text(state.elapsedString).foregroundStyle(.white.opacity(0.85))
+            }
+            Button { settings.overlayMinimized = false } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10 * scale, weight: .bold))
+                    .foregroundStyle(.white.opacity(hovering ? 0.9 : 0.4))
+                    .frame(width: 16 * scale, height: 16 * scale)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Expand")
+        }
+        .font(.system(size: 14 * scale, weight: .bold, design: .rounded))
+        .monospacedDigit()
+        .padding(.horizontal, 12 * scale)
+        .padding(.vertical, 6 * scale)
+        .background(Capsule().fill(chrome))
+        .fixedSize()
+    }
+
+    private var toolbar: some View {
+        HStack(spacing: 2 * scale) {
+            toolButton("minus", help: "Minimize") { settings.overlayMinimized = true }
+            toolButton("xmark", help: "Quit TrainerHUD") { onQuit() }
+        }
+        .padding(4 * scale)
+    }
+
+    private func toolButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 9 * scale, weight: .bold))
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(width: 16 * scale, height: 16 * scale)
+                .background(Circle().fill(Color.white.opacity(0.15)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 
     @State private var clock = Date()

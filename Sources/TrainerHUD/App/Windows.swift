@@ -148,7 +148,9 @@ struct SettingsView: View {
             Section("Appearance") {
                 Slider(value: $settings.overlayScale, in: 0.6...2.0, step: 0.1) { Text("Size \(String(format: "%.1f", settings.overlayScale))×") }
                 Slider(value: $settings.overlayOpacity, in: 0.2...1.0, step: 0.05) { Text("Background opacity") }
-                Toggle("Locked (click-through)", isOn: Binding(get: { settings.overlayLocked }, set: { overlay.applyLock($0) }))
+                Toggle("Click-through (ignore mouse; hover controls disabled)", isOn: Binding(get: { settings.overlayLocked }, set: { overlay.applyLock($0) }))
+                Toggle("Minimized", isOn: $settings.overlayMinimized)
+                Text("Drag the overlay anywhere by its background. Hover it for the minimize button.").font(.caption).foregroundStyle(.secondary)
                 Button("Reset position") { overlay.centerTop() }
             }
             Section("Fields") {

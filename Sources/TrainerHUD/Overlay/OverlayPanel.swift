@@ -11,6 +11,8 @@ final class OverlayPanel: NSPanel {
 final class FittingHostingView<Content: View>: NSHostingView<Content> {
     var onSizeChange: ((NSSize) -> Void)?
 
+    override var mouseDownCanMoveWindow: Bool { true }
+
     override func layout() {
         super.layout()
         onSizeChange?(fittingSize)
@@ -44,7 +46,7 @@ final class OverlayController {
 
         let host = FittingHostingView(rootView: HUDView(state: session.state, settings: settings, controllerLabel: { [weak session] in
             session?.controllerLabel($0) ?? "Ctrl"
-        }))
+        }, onQuit: { NSApp.terminate(nil) }))
         host.sizingOptions = [.intrinsicContentSize]
         panel.contentView = host
         host.onSizeChange = { [weak self] size in self?.fit(to: size) }
@@ -103,10 +105,7 @@ final class OverlayController {
         panel.ignoresMouseEvents = locked
         panel.interactive = !locked
         session.settings.overlayLocked = locked
-        if !locked {
-            panel.orderFrontRegardless()
-            panel.makeKey()
-        }
+        if !locked { panel.orderFrontRegardless() }
     }
 
     func toggleVisible() {
