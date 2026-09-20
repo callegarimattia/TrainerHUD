@@ -100,8 +100,9 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
                                                              services: services, zwiftType: zType, lastSeen: Date())
         if isNew {
             let md = (advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data)?.hexString ?? "-"
-            Log.info("Found \(name) rssi=\(RSSI) services=\(services.map(\.uuidString).sorted()) mfg=\(md) zwift=\(zType?.label ?? "-")")
+            Log.info("Found \(name) [\(peripheral.identifier.uuidString)] rssi=\(RSSI) services=\(services.map(\.uuidString).sorted()) mfg=\(md) zwift=\(zType?.label ?? "-")")
             autoConnectIfRemembered(peripheral.identifier)
+            autoAdopt(peripheral.identifier)
             onChange?()
         }
     }
@@ -114,6 +115,26 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
         else if s.rememberedHeartRate == str { connect(id: id, role: .heartRate, remember: false) }
         else if s.rememberedPowerMeter == str { connect(id: id, role: .powerMeter, remember: false) }
         else if s.rememberedControllers.contains(str) { connect(id: id, role: .controller, remember: false) }
+    }
+
+    // First run convenience: with nothing remembered for a role, adopt the first matching device.
+    private func autoAdopt(_ id: UUID) {
+        let s = session.settings
+        guard s.autoConnect, handlers[id] == nil, let dev = discovered[id] else { return }
+        let roles = dev.roles
+        if roles.contains(.controller) {
+            if !s.rememberedControllers.contains(id.uuidString) { connect(id: id, role: .controller) }
+            return
+        }
+        if roles.contains(.trainer), dev.services.contains(GATT.ftms), s.rememberedTrainer == nil {
+            connect(id: id, role: .trainer); return
+        }
+        if roles.contains(.heartRate), s.rememberedHeartRate == nil {
+            connect(id: id, role: .heartRate); return
+        }
+        if roles.contains(.powerMeter), !dev.services.contains(GATT.ftms), s.rememberedPowerMeter == nil {
+            connect(id: id, role: .powerMeter); return
+        }
     }
 
     func connect(id: UUID, role: DeviceRole, remember: Bool = true) {

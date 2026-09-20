@@ -31,5 +31,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 echo -n "APPL????" > "$APP/Contents/PkgInfo"
-codesign --force --sign - --identifier com.hugob.TrainerHUD "$APP" >/dev/null 2>&1 || echo "warning: codesign failed"
+# A stable identity keeps the macOS Bluetooth permission across rebuilds (ad-hoc signatures re-prompt every time).
+if security find-identity -v -p codesigning 2>/dev/null | grep -q "TrainerHUD Dev"; then
+  codesign --force --sign "TrainerHUD Dev" --identifier com.hugob.TrainerHUD "$APP" 2>&1 | grep -v "replacing existing" || true
+else
+  codesign --force --sign - --identifier com.hugob.TrainerHUD "$APP" >/dev/null 2>&1 || echo "warning: codesign failed"
+fi
 echo "Built $APP"
