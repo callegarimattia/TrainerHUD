@@ -17,7 +17,7 @@ No Xcode required: it builds with the Command Line Tools' Swift toolchain.
 
 ```bash
 ./scripts/build-app.sh          # → build/TrainerHUD.app
-open build/TrainerHUD.app
+open build/TrainerHUD.app        # or ./scripts/install.sh to install into /Applications and relaunch
 ```
 
 `swift build && .build/debug/TrainerHUD --selftest` runs the protocol test vectors
