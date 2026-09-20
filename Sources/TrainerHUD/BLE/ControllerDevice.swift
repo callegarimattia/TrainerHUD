@@ -234,10 +234,6 @@ final class ZwiftControllerDevice: NSObject, DeviceHandler, CBPeripheralDelegate
         case ZwiftOpcode.vendor.rawValue:
             Log.ble("\(displayName) vendor ⇠ \(d.hexString)")
             if d.count >= 2, d[d.startIndex + 1] == 0x03 { lastVendor = d }
-            if d.count >= 5, d[d.startIndex + 1] == 0x05 {
-                Log.warn("\(displayName): device reports it stopped (server lock). Re-bless it in Zwift or use the restart loop.")
-                session.controllerStatusChanged(self, .stalled)
-            }
         case ZwiftOpcode.lostControl.rawValue:
             Log.warn("\(displayName): another app took control")
             session.controllerStatusChanged(self, .stalled)

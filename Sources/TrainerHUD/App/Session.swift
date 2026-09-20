@@ -277,7 +277,18 @@ final class Session {
         state.controllerBattery[c.id.uuidString] = pct
     }
 
+    private static let rightSideButtons: Set<ControllerButton> = [.a, .b, .y, .z, .shiftUpRight, .shiftDownRight, .powerUpRight, .onOffRight, .paddleRight]
+    private var lastPress: [ControllerButton: (UUID, Date)] = [:]
+
     func controllerPressed(_ button: ControllerButton, from c: ZwiftControllerDevice) {
+        // The Click v2 left puck relays the right puck's buttons; drop the relay when the right puck is connected itself.
+        if c.type == .clickV2Left, Session.rightSideButtons.contains(button),
+           controllers.values.contains(where: { $0.type == .clickV2Right && $0.handshakeDone }) {
+            return
+        }
+        let now = Date()
+        if let (id, at) = lastPress[button], id != c.id, now.timeIntervalSince(at) < 0.2 { return }
+        lastPress[button] = (c.id, now)
         let action = settings.buttonActions[button] ?? ButtonAction.none
         Log.info("\(c.displayName) pressed \(button.rawValue) → \(action.rawValue)")
         perform(action)

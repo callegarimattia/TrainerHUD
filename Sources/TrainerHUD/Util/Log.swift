@@ -32,7 +32,8 @@ final class Log {
     static func ble(_ s: String) { shared.append("BLE ", s) }
 
     private func append(_ level: String, _ s: String) {
-        let line = "\(df.string(from: Date())) \(level) \(s)"
+        let clean = String(s.unicodeScalars.filter { $0.value >= 0x20 || $0 == "\t" }.map(Character.init))
+        let line = "\(df.string(from: Date())) \(level) \(clean)"
         logger.log("\(line, privacy: .public)")
         queue.async {
             self.handle?.write((line + "\n").data(using: .utf8)!)

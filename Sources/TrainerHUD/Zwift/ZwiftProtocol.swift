@@ -305,7 +305,9 @@ enum ZwiftMessages {
                     } else if f.number == 7, let s = String(data: f.bytes, encoding: .utf8), s.allSatisfy({ $0.isASCII }) {
                         info.hardware = s; found = true
                     } else if f.number == 2, f.bytes.count == 4 {
-                        info.firmware = f.bytes.map { String($0) }.joined(separator: ".")
+                        var parts = f.bytes.reversed().map { String($0) }
+                        while parts.count > 3, parts.last == "0" { parts.removeLast() }
+                        info.firmware = parts.joined(separator: ".")
                     } else {
                         scan(f.bytes, depth: depth + 1)
                     }
