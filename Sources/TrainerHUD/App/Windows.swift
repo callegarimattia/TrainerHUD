@@ -89,6 +89,18 @@ struct SettingsView: View {
         Form {
             Section("Rider") {
                 HStack {
+                    Text("FTP (power zones)")
+                    Spacer()
+                    TextField("W", value: $settings.ftpWatts, format: .number).frame(width: 80)
+                    Text("W")
+                }
+                HStack {
+                    Text("Max heart rate (HR zones)")
+                    Spacer()
+                    TextField("bpm", value: $settings.maxHeartRate, format: .number).frame(width: 80)
+                    Text("bpm")
+                }
+                HStack {
                     Text("Rider weight")
                     Spacer()
                     TextField("kg", value: $settings.riderWeightKg, format: .number).frame(width: 80)
@@ -147,7 +159,7 @@ struct SettingsView: View {
         Form {
             Section("Appearance") {
                 Slider(value: $settings.overlayScale, in: 0.6...2.0, step: 0.1) { Text("Size \(String(format: "%.1f", settings.overlayScale))×") }
-                Slider(value: $settings.overlayOpacity, in: 0.2...1.0, step: 0.05) { Text("Background opacity") }
+                Slider(value: $settings.overlayOpacity, in: 0.0...1.0, step: 0.05) { Text("Background darkness") }
                 Toggle("Click-through (ignore mouse; hover controls disabled)", isOn: Binding(get: { settings.overlayLocked }, set: { overlay.applyLock($0) }))
                 Toggle("Minimized", isOn: $settings.overlayMinimized)
                 Text("Drag the overlay anywhere by its background. Hover it for the minimize button.").font(.caption).foregroundStyle(.secondary)

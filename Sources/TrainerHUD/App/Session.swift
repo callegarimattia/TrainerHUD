@@ -273,6 +273,13 @@ final class Session {
         }
     }
 
+    func controllerIdentified(_ c: ZwiftControllerDevice) {
+        if let t = c.type { settings.controllerTypes[c.id.uuidString] = Int(t.rawValue) }
+        // Republish so the HUD re-renders the label.
+        let st = state.controllerStatuses[c.id.uuidString]
+        state.controllerStatuses[c.id.uuidString] = st
+    }
+
     func controllerBattery(_ c: ZwiftControllerDevice, _ pct: Int) {
         state.controllerBattery[c.id.uuidString] = pct
     }

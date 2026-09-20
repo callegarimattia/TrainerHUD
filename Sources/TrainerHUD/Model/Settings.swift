@@ -71,6 +71,8 @@ final class Settings: ObservableObject {
     @Published var gradePercent: Double { didSet { save() } }
     @Published var ftmsGearGradeStep: Double { didSet { save() } }
     @Published var ergTargetWatts: Int { didSet { save() } }
+    @Published var ftpWatts: Int { didSet { save() } }
+    @Published var maxHeartRate: Int { didSet { save() } }
 
     @Published var overlayScale: Double { didSet { save() } }
     @Published var overlayOpacity: Double { didSet { save() } }
@@ -101,6 +103,7 @@ final class Settings: ObservableObject {
     @Published var rememberedHeartRate: String? { didSet { save() } }
     @Published var rememberedPowerMeter: String? { didSet { save() } }
     @Published var rememberedControllers: [String] { didSet { save() } }
+    @Published var controllerTypes: [String: Int] { didSet { save() } }
 
     init() {
         let d = UserDefaults.standard
@@ -118,9 +121,11 @@ final class Settings: ObservableObject {
         gradePercent = dbl("gradePercent", 0)
         ftmsGearGradeStep = dbl("ftmsGearGradeStep", 0.5)
         ergTargetWatts = int("ergTargetWatts", 150)
+        ftpWatts = int("ftpWatts", 200)
+        maxHeartRate = int("maxHeartRate", 185)
 
         overlayScale = dbl("overlayScale", 1.0)
-        overlayOpacity = dbl("overlayOpacity", 0.85)
+        overlayOpacity = dbl("overlayOpacity2", 0.45)
         overlayLocked = bool("overlayClickThrough", false)
         overlayMinimized = bool("overlayMinimized", false)
         overlayVisible = bool("overlayVisible", true)
@@ -158,6 +163,7 @@ final class Settings: ObservableObject {
         rememberedHeartRate = d.string(forKey: "rememberedHeartRate")
         rememberedPowerMeter = d.string(forKey: "rememberedPowerMeter")
         rememberedControllers = d.stringArray(forKey: "rememberedControllers") ?? []
+        controllerTypes = (d.dictionary(forKey: "controllerTypes") as? [String: Int]) ?? [:]
         loading = false
     }
 
@@ -175,8 +181,10 @@ final class Settings: ObservableObject {
         d.set(gradePercent, forKey: "gradePercent")
         d.set(ftmsGearGradeStep, forKey: "ftmsGearGradeStep")
         d.set(ergTargetWatts, forKey: "ergTargetWatts")
+        d.set(ftpWatts, forKey: "ftpWatts")
+        d.set(maxHeartRate, forKey: "maxHeartRate")
         d.set(overlayScale, forKey: "overlayScale")
-        d.set(overlayOpacity, forKey: "overlayOpacity")
+        d.set(overlayOpacity, forKey: "overlayOpacity2")
         d.set(overlayLocked, forKey: "overlayClickThrough")
         d.set(overlayMinimized, forKey: "overlayMinimized")
         d.set(overlayVisible, forKey: "overlayVisible")
@@ -206,5 +214,6 @@ final class Settings: ObservableObject {
         d.set(rememberedHeartRate, forKey: "rememberedHeartRate")
         d.set(rememberedPowerMeter, forKey: "rememberedPowerMeter")
         d.set(rememberedControllers, forKey: "rememberedControllers")
+        d.set(controllerTypes, forKey: "controllerTypes")
     }
 }

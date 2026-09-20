@@ -6,256 +6,362 @@ struct HUDView: View {
     var controllerLabel: (String) -> String
     var onQuit: () -> Void = {}
     @State private var hovering = false
+    @State private var clock = Date()
+    @State private var gearBump = false
     private let clockTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    private var scale: CGFloat { CGFloat(settings.overlayScale) }
+    private var k: CGFloat { CGFloat(settings.overlayScale) }
 
     var body: some View {
         Group {
             if settings.overlayMinimized { minimized } else { expanded }
         }
         .onHover { hovering = $0 }
-        .onReceive(clockTimer) { now in clock = now }
+        .onReceive(clockTimer) { clock = $0 }
+        .onChange(of: state.gearIndex) { _, _ in
+            withAnimation(.spring(response: 0.18, dampingFraction: 0.5)) { gearBump = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { gearBump = false }
+            }
+        }
     }
 
-    private var chrome: some ShapeStyle { Color.black.opacity(settings.overlayOpacity) }
+    // MARK: Expanded
 
     private var expanded: some View {
-        VStack(spacing: 4 * scale) {
-            HStack(spacing: 14 * scale) {
-                if settings.showPower {
-                    Metric(title: "POWER", value: "\(state.power3s)", unit: "W", scale: scale, color: .white)
-                }
-                if settings.showCadence {
-                    Metric(title: "CADENCE", value: "\(state.cadence)", unit: "rpm", scale: scale, color: .white)
-                }
-                if settings.showHeartRate {
-                    Metric(title: "HEART", value: state.heartRate > 0 ? "\(state.heartRate)" : "--", unit: "bpm", scale: scale, color: hrColor)
-                }
-                if settings.showSpeed {
-                    Metric(title: "SPEED", value: String(format: "%.1f", state.speedKmh), unit: "km/h", scale: scale, color: .white)
-                }
-                if settings.showTime {
-                    Metric(title: state.timerRunning ? "TIME" : "TIME ⏸", value: state.elapsedString, unit: "", scale: scale, color: .white)
-                }
-                if settings.showDistance {
-                    Metric(title: "DIST", value: String(format: "%.1f", state.distanceKm), unit: "km", scale: scale, color: .white)
-                }
-                if settings.showGear {
-                    GearCell(index: state.gearIndex, count: state.gearCount, ratio: state.gearRatio, scale: scale, flash: state.lastShift)
-                }
-                if settings.showGrade {
-                    Metric(title: state.mode == .erg ? "ERG" : "GRADE",
-                           value: state.mode == .erg ? "\(state.ergTarget)" : String(format: "%+.1f", state.gradePercent),
-                           unit: state.mode == .erg ? "W" : "%", scale: scale, color: state.mode == .erg ? .orange : .white)
-                }
-                if settings.showResistance, let r = state.resistance {
-                    Metric(title: "RES", value: "\(r)", unit: "", scale: scale, color: .white)
-                }
-                if settings.showClock {
-                    Metric(title: "CLOCK", value: clockString, unit: "", scale: scale, color: .white.opacity(0.8))
-                }
-                statusColumn
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
+                if settings.showPower { powerCell; divider }
+                if settings.showHeartRate { heartCell; divider }
+                if settings.showCadence { cadenceCell; divider }
+                if settings.showGear { gearCell; divider }
+                if settings.showGrade { gradeCell; divider }
+                if settings.showSpeed { smallCell(label: "SPEED", value: String(format: "%.1f", state.speedKmh), unit: "km/h") }
+                if settings.showDistance { smallCell(label: "DIST", value: String(format: "%.1f", state.distanceKm), unit: "km") }
+                if settings.showTime { smallCell(label: state.timerRunning ? "TIME" : "PAUSED", value: state.elapsedString, unit: "", dim: !state.timerRunning) }
+                if settings.showResistance, let r = state.resistance { smallCell(label: "RES", value: "\(r)", unit: "") }
+                if settings.showClock { smallCell(label: "CLOCK", value: clockString, unit: "", dim: true) }
+                statusColumn.padding(.leading, 10 * k).frame(height: cellHeight, alignment: .top)
             }
             if let toast = state.toast {
                 Text(toast)
-                    .font(.system(size: 11 * scale, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.yellow)
+                    .font(.system(size: 10.5 * k, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.black.opacity(0.85))
+                    .padding(.horizontal, 8 * k).padding(.vertical, 2.5 * k)
+                    .background(Capsule().fill(Color(hue: 0.13, saturation: 0.9, brightness: 1)))
+                    .padding(.top, 5 * k)
+                    .transition(.opacity)
             }
         }
-        .padding(.horizontal, 16 * scale)
-        .padding(.vertical, 8 * scale)
-        .padding(.top, hovering ? 10 * scale : 0)
-        .background(RoundedRectangle(cornerRadius: 14 * scale, style: .continuous).fill(chrome))
+        .padding(.horizontal, 16 * k)
+        .padding(.vertical, 9 * k)
+        .padding(.top, hovering ? 6 * k : 0)
+        .background(chrome)
         .overlay(alignment: .topTrailing) { if hovering { toolbar } }
         .overlay(alignment: .top) {
             if hovering {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 9 * scale, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.35))
-                    .padding(.top, 3 * scale)
+                Capsule().fill(.white.opacity(0.28)).frame(width: 28 * k, height: 3 * k).padding(.top, 4 * k)
             }
         }
         .fixedSize()
+        .animation(.easeOut(duration: 0.15), value: hovering)
     }
 
-    private var minimized: some View {
-        HStack(spacing: 10 * scale) {
-            if settings.showGear {
-                HStack(spacing: 3 * scale) {
-                    Image(systemName: "gearshape.fill").font(.system(size: 10 * scale)).foregroundStyle(.cyan.opacity(0.8))
-                    Text("\(state.gearIndex + 1)").foregroundStyle(.cyan)
-                }
+    private var chrome: some View {
+        RoundedRectangle(cornerRadius: 16 * k, style: .continuous)
+            .fill(Color.black.opacity(settings.overlayOpacity))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16 * k, style: .continuous)
+                    .strokeBorder(LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0.06)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
+            )
+    }
+
+    private var divider: some View {
+        Rectangle().fill(.white.opacity(0.10)).frame(width: 1, height: 40 * k).padding(.horizontal, 12 * k).padding(.top, 8 * k)
+    }
+
+    private var cellHeight: CGFloat { 58 * k }
+
+    // MARK: Cells
+
+    private func label(_ s: String, color: Color = .white.opacity(0.5)) -> some View {
+        Text(s).font(.system(size: 8.5 * k, weight: .bold, design: .rounded)).tracking(1.4).foregroundStyle(color)
+    }
+
+    private func big(_ s: String, size: CGFloat, color: Color = .white) -> some View {
+        Text(s).font(.system(size: size * k, weight: .heavy, design: .rounded)).monospacedDigit()
+            .foregroundStyle(color).lineLimit(1)
+    }
+
+    private func unit(_ s: String) -> some View {
+        Text(s).font(.system(size: 10 * k, weight: .semibold, design: .rounded)).foregroundStyle(.white.opacity(0.5))
+    }
+
+    private var powerCell: some View {
+        let zone = Zones.power(state.power3s, ftp: settings.ftpWatts)
+        return VStack(alignment: .leading, spacing: 2 * k) {
+            HStack(spacing: 5 * k) {
+                label("POWER")
+                if state.mode == .erg { label("ERG \(state.ergTarget)W", color: .orange) }
+                else if zone.index > 0 { label("Z\(zone.index)", color: zone.color) }
             }
-            if settings.showPower {
-                Text("\(state.power3s)") + Text(" W").font(.system(size: 9 * scale, weight: .medium, design: .rounded)).foregroundStyle(.white.opacity(0.6))
+            HStack(alignment: .firstTextBaseline, spacing: 3 * k) {
+                big("\(state.power3s)", size: 40)
+                unit("W")
             }
-            if settings.showHeartRate {
-                HStack(spacing: 2 * scale) {
-                    Image(systemName: "heart.fill").font(.system(size: 9 * scale)).foregroundStyle(hrColor)
-                    Text(state.heartRate > 0 ? "\(state.heartRate)" : "--").foregroundStyle(hrColor)
-                }
-            }
-            if settings.showTime {
-                Text(state.elapsedString).foregroundStyle(.white.opacity(0.85))
-            }
-            Button { settings.overlayMinimized = false } label: {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10 * scale, weight: .bold))
-                    .foregroundStyle(.white.opacity(hovering ? 0.9 : 0.4))
-                    .frame(width: 16 * scale, height: 16 * scale)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help("Expand")
+            ZoneBar(fraction: min(Double(state.power3s) / Double(max(settings.ftpWatts, 1)) / 1.5, 1), color: zone.color, k: k)
+                .frame(width: 96 * k)
         }
-        .font(.system(size: 14 * scale, weight: .bold, design: .rounded))
-        .monospacedDigit()
-        .padding(.horizontal, 12 * scale)
-        .padding(.vertical, 6 * scale)
-        .background(Capsule().fill(chrome))
-        .fixedSize()
+        .frame(height: cellHeight, alignment: .top)
     }
 
-    private var toolbar: some View {
-        HStack(spacing: 2 * scale) {
-            toolButton("minus", help: "Minimize") { settings.overlayMinimized = true }
-            toolButton("xmark", help: "Quit TrainerHUD") { onQuit() }
+    private var heartCell: some View {
+        let zone = Zones.heart(state.heartRate, max: settings.maxHeartRate)
+        return VStack(alignment: .leading, spacing: 2 * k) {
+            HStack(spacing: 4 * k) {
+                Image(systemName: "heart.fill").font(.system(size: 8 * k)).foregroundStyle(zone.color)
+                    .scaleEffect(state.heartRate > 0 && clock.timeIntervalSince1970.truncatingRemainder(dividingBy: 2) < 1 ? 1.15 : 1)
+                label("HEART")
+                if zone.index > 0 { label("Z\(zone.index)", color: zone.color) }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 3 * k) {
+                big(state.heartRate > 0 ? "\(state.heartRate)" : "—", size: 30, color: state.heartRate > 0 ? zone.color : .white.opacity(0.3))
+                unit("bpm")
+            }
         }
-        .padding(4 * scale)
+        .frame(height: cellHeight, alignment: .top)
     }
 
-    private func toolButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 9 * scale, weight: .bold))
-                .foregroundStyle(.white.opacity(0.85))
-                .frame(width: 16 * scale, height: 16 * scale)
-                .background(Circle().fill(Color.white.opacity(0.15)))
-                .contentShape(Circle())
+    private var cadenceCell: some View {
+        VStack(alignment: .leading, spacing: 2 * k) {
+            label("CADENCE")
+            HStack(alignment: .firstTextBaseline, spacing: 3 * k) {
+                big("\(state.cadence)", size: 30, color: state.cadence == 0 ? .white.opacity(0.35) : .white)
+                unit("rpm")
+            }
         }
-        .buttonStyle(.plain)
-        .help(help)
+        .frame(height: cellHeight, alignment: .top)
     }
 
-    @State private var clock = Date()
+    private var gearCell: some View {
+        let accent = Color(hue: 0.52, saturation: 0.85, brightness: 1)
+        let recent = state.lastShift.map { Date().timeIntervalSince($0.at) < 0.6 } ?? false
+        return VStack(alignment: .leading, spacing: 2 * k) {
+            HStack(spacing: 5 * k) {
+                label("GEAR")
+                label(String(format: "%.2f", state.gearRatio), color: .white.opacity(0.35))
+                if !state.trainerHasZwiftProtocol, state.trainerStatus == .ready { label("FTMS", color: .orange.opacity(0.8)) }
+            }
+            HStack(alignment: .center, spacing: 8 * k) {
+                Text(String(state.gearIndex + 1))
+                    .font(.system(size: 40 * k, weight: .heavy, design: .rounded))
+                    .foregroundStyle(recent ? Color.white : accent)
+                    .fixedSize()
+                GearLadder(index: state.gearIndex, count: state.gearCount, accent: accent, k: k)
+            }
+        }
+        .frame(height: cellHeight, alignment: .top)
+    }
+
+    private var gradeCell: some View {
+        let g = state.gradePercent
+        let color: Color = g > 0.05 ? Color(hue: 0.08, saturation: 0.85, brightness: 1) : (g < -0.05 ? Color(hue: 0.38, saturation: 0.7, brightness: 0.95) : .white)
+        return VStack(alignment: .leading, spacing: 2 * k) {
+            label("GRADE")
+            HStack(alignment: .firstTextBaseline, spacing: 3 * k) {
+                Image(systemName: g > 0.05 ? "arrow.up.right" : (g < -0.05 ? "arrow.down.right" : "arrow.right"))
+                    .font(.system(size: 12 * k, weight: .black)).foregroundStyle(color.opacity(0.85))
+                big(String(format: "%.1f", abs(g)), size: 24, color: color)
+                unit("%")
+            }
+        }
+        .frame(height: cellHeight, alignment: .top)
+    }
+
+    private func smallCell(label l: String, value: String, unit u: String, dim: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 2 * k) {
+            label(l)
+            HStack(alignment: .firstTextBaseline, spacing: 3 * k) {
+                big(value, size: 22, color: dim ? .white.opacity(0.6) : .white)
+                if !u.isEmpty { unit(u) }
+            }
+        }
+        .frame(height: cellHeight, alignment: .top)
+        .padding(.trailing, 14 * k)
+    }
+
     private var clockString: String {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f.string(from: clock)
+        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: clock)
     }
 
-    private var hrColor: Color {
-        let hr = state.heartRate
-        if hr == 0 { return .gray }
-        if hr < 120 { return .white }
-        if hr < 145 { return .green }
-        if hr < 160 { return .yellow }
-        if hr < 172 { return .orange }
-        return .red
-    }
+    // MARK: Status
 
     private var statusColumn: some View {
-        VStack(alignment: .leading, spacing: 1 * scale) {
-            statusLine(symbol: state.trainerStatus.symbol, label: state.trainerHasZwiftProtocol ? "Trainer·VS" : "Trainer", status: state.trainerStatus)
-            statusLine(symbol: state.heartRateStatus.symbol, label: "HR", status: state.heartRateStatus)
-            if state.powerMeterStatus != .disconnected {
-                statusLine(symbol: state.powerMeterStatus.symbol, label: "Pedals", status: state.powerMeterStatus)
-            }
+        VStack(alignment: .leading, spacing: 2.5 * k) {
+            statusLine(state.trainerHasZwiftProtocol ? "Trainer · VS" : "Trainer", state.trainerStatus)
+            statusLine("HR", state.heartRateStatus)
+            if state.powerMeterStatus != .disconnected { statusLine("Pedals", state.powerMeterStatus) }
             ForEach(state.controllerStatuses.keys.sorted(), id: \.self) { id in
-                let st = state.controllerStatuses[id] ?? .disconnected
                 let bat = state.controllerBattery[id].map { " \($0)%" } ?? ""
-                statusLine(symbol: st.symbol, label: controllerLabel(id) + bat, status: st)
+                statusLine(controllerLabel(id) + bat, state.controllerStatuses[id] ?? .disconnected)
             }
-            if !state.bluetoothOn {
-                statusLine(symbol: "✕", label: "Bluetooth off", status: .stalled)
-            }
+            if !state.bluetoothOn { statusLine("Bluetooth off", .stalled) }
         }
-        .font(.system(size: 9 * scale, weight: .medium, design: .rounded))
     }
 
-    private func statusLine(symbol: String, label: String, status: ConnectionStatus) -> some View {
-        HStack(spacing: 3 * scale) {
-            Text(symbol).foregroundStyle(statusColor(status))
-            Text(label).foregroundStyle(.white.opacity(0.75))
+    private func statusLine(_ text: String, _ s: ConnectionStatus) -> some View {
+        HStack(spacing: 4 * k) {
+            Circle().fill(statusColor(s)).frame(width: 5 * k, height: 5 * k)
+                .shadow(color: statusColor(s).opacity(s == .ready ? 0.8 : 0), radius: 3 * k)
+            Text(text).font(.system(size: 8.5 * k, weight: .semibold, design: .rounded)).foregroundStyle(.white.opacity(0.6))
         }
     }
 
     private func statusColor(_ s: ConnectionStatus) -> Color {
         switch s {
-        case .disconnected: return .gray
-        case .connecting: return .yellow
-        case .connected: return .yellow
-        case .ready: return .green
+        case .disconnected: return .white.opacity(0.25)
+        case .connecting, .connected: return .yellow
+        case .ready: return Color(hue: 0.38, saturation: 0.8, brightness: 0.95)
         case .stalled: return .red
         }
     }
-}
 
-private struct Metric: View {
-    let title: String
-    let value: String
-    let unit: String
-    let scale: CGFloat
-    let color: Color
+    // MARK: Minimized
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(.system(size: 9 * scale, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.55))
-                .tracking(0.8)
-            HStack(alignment: .firstTextBaseline, spacing: 2 * scale) {
-                Text(value)
-                    .font(.system(size: 28 * scale, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(color)
-                if !unit.isEmpty {
-                    Text(unit)
-                        .font(.system(size: 10 * scale, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.6))
+    private var minimized: some View {
+        let hz = Zones.heart(state.heartRate, max: settings.maxHeartRate)
+        let pz = Zones.power(state.power3s, ftp: settings.ftpWatts)
+        return HStack(spacing: 12 * k) {
+            if settings.showGear {
+                HStack(spacing: 4 * k) {
+                    Text("\(state.gearIndex + 1)").foregroundStyle(Color(hue: 0.52, saturation: 0.85, brightness: 1))
+                        .scaleEffect(gearBump ? 1.15 : 1)
+                    GearLadder(index: state.gearIndex, count: state.gearCount, accent: Color(hue: 0.52, saturation: 0.85, brightness: 1), k: k * 0.6)
                 }
             }
+            if settings.showPower {
+                HStack(alignment: .firstTextBaseline, spacing: 2 * k) {
+                    Text("\(state.power3s)").foregroundStyle(pz.index > 0 ? pz.color : .white)
+                    Text("W").font(.system(size: 9 * k, weight: .semibold, design: .rounded)).foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            if settings.showHeartRate {
+                HStack(spacing: 3 * k) {
+                    Image(systemName: "heart.fill").font(.system(size: 9 * k)).foregroundStyle(hz.color)
+                    Text(state.heartRate > 0 ? "\(state.heartRate)" : "—").foregroundStyle(state.heartRate > 0 ? hz.color : .white.opacity(0.35))
+                }
+            }
+            if settings.showCadence {
+                HStack(alignment: .firstTextBaseline, spacing: 2 * k) {
+                    Text("\(state.cadence)").foregroundStyle(.white.opacity(0.85))
+                    Text("rpm").font(.system(size: 9 * k, weight: .semibold, design: .rounded)).foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            if settings.showTime { Text(state.elapsedString).foregroundStyle(.white.opacity(0.7)) }
+            Button { settings.overlayMinimized = false } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9 * k, weight: .black))
+                    .foregroundStyle(.white.opacity(hovering ? 0.9 : 0.35))
+                    .frame(width: 16 * k, height: 16 * k).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
+        .font(.system(size: 15 * k, weight: .heavy, design: .rounded))
+        .monospacedDigit()
+        .padding(.horizontal, 14 * k)
+        .padding(.vertical, 7 * k)
+        .background(
+            Capsule().fill(Color.black.opacity(settings.overlayOpacity))
+                .overlay(Capsule().strokeBorder(.white.opacity(0.18), lineWidth: 1))
+        )
+        .fixedSize()
+    }
+
+    private var toolbar: some View {
+        HStack(spacing: 3 * k) {
+            toolButton("minus", help: "Minimize") { settings.overlayMinimized = true }
+            toolButton("xmark", help: "Quit TrainerHUD") { onQuit() }
+        }
+        .padding(5 * k)
+    }
+
+    private func toolButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 8 * k, weight: .black))
+                .foregroundStyle(.white.opacity(0.9))
+                .frame(width: 15 * k, height: 15 * k)
+                .background(Circle().fill(.white.opacity(0.18)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 }
 
-private struct GearCell: View {
+private struct ZoneBar: View {
+    let fraction: Double
+    let color: Color
+    let k: CGFloat
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(.white.opacity(0.12))
+                Capsule().fill(LinearGradient(colors: [color.opacity(0.6), color], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: max(4 * k, geo.size.width * fraction))
+                    .animation(.easeOut(duration: 0.4), value: fraction)
+            }
+        }
+        .frame(height: 3 * k)
+    }
+}
+
+private struct GearLadder: View {
     let index: Int
     let count: Int
-    let ratio: Double
-    let scale: CGFloat
-    let flash: (up: Bool, at: Date)?
+    let accent: Color
+    let k: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("GEAR")
-                .font(.system(size: 9 * scale, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.55))
-                .tracking(0.8)
-            HStack(alignment: .firstTextBaseline, spacing: 4 * scale) {
-                Text("\(index + 1)")
-                    .font(.system(size: 28 * scale, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(recent ? (flash?.up == true ? Color.green : Color.orange) : Color.cyan)
-                VStack(alignment: .leading, spacing: 2 * scale) {
-                    Text(String(format: "%.2f", ratio))
-                        .font(.system(size: 10 * scale, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.6))
-                    HStack(spacing: 1.5 * scale) {
-                        ForEach(0..<max(count, 1), id: \.self) { i in
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(i <= index ? Color.cyan : Color.white.opacity(0.18))
-                                .frame(width: 3 * scale, height: (4 + CGFloat(i) * 0.35) * scale)
-                        }
-                    }
-                }
+        HStack(alignment: .bottom, spacing: 1.6 * k) {
+            ForEach(0..<max(count, 1), id: \.self) { i in
+                RoundedRectangle(cornerRadius: 1 * k)
+                    .fill(i == index ? Color.white : (i < index ? accent.opacity(0.85) : Color.white.opacity(0.16)))
+                    .frame(width: 3 * k, height: (6 + CGFloat(i) * 14 / CGFloat(max(count - 1, 1))) * k)
+                    .shadow(color: i == index ? accent.opacity(0.9) : .clear, radius: 3 * k)
             }
+        }
+        .animation(.easeOut(duration: 0.15), value: index)
+    }
+}
+
+enum Zones {
+    struct Zone { let index: Int; let color: Color }
+
+    static func power(_ w: Int, ftp: Int) -> Zone {
+        guard ftp > 0, w > 0 else { return Zone(index: 0, color: .white.opacity(0.35)) }
+        let p = Double(w) / Double(ftp) * 100
+        switch p {
+        case ..<55: return Zone(index: 1, color: Color(white: 0.75))
+        case ..<75: return Zone(index: 2, color: Color(hue: 0.58, saturation: 0.75, brightness: 1))
+        case ..<90: return Zone(index: 3, color: Color(hue: 0.38, saturation: 0.75, brightness: 0.95))
+        case ..<105: return Zone(index: 4, color: Color(hue: 0.14, saturation: 0.9, brightness: 1))
+        case ..<120: return Zone(index: 5, color: Color(hue: 0.07, saturation: 0.9, brightness: 1))
+        case ..<150: return Zone(index: 6, color: Color(hue: 0.0, saturation: 0.85, brightness: 1))
+        default: return Zone(index: 7, color: Color(hue: 0.8, saturation: 0.7, brightness: 1))
         }
     }
 
-    private var recent: Bool {
-        guard let f = flash else { return false }
-        return Date().timeIntervalSince(f.at) < 0.8
+    static func heart(_ bpm: Int, max: Int) -> Zone {
+        guard max > 0, bpm > 0 else { return Zone(index: 0, color: .white.opacity(0.35)) }
+        let p = Double(bpm) / Double(max) * 100
+        switch p {
+        case ..<60: return Zone(index: 1, color: Color(white: 0.8))
+        case ..<70: return Zone(index: 2, color: Color(hue: 0.58, saturation: 0.75, brightness: 1))
+        case ..<80: return Zone(index: 3, color: Color(hue: 0.38, saturation: 0.75, brightness: 0.95))
+        case ..<90: return Zone(index: 4, color: Color(hue: 0.09, saturation: 0.9, brightness: 1))
+        default: return Zone(index: 5, color: Color(hue: 0.0, saturation: 0.85, brightness: 1))
+        }
     }
 }

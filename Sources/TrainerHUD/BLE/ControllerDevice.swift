@@ -5,8 +5,9 @@ final class ZwiftControllerDevice: NSObject, DeviceHandler, CBPeripheralDelegate
     let peripheral: CBPeripheral
     let role = DeviceRole.controller
     unowned let session: Session
-    private(set) var type: ZwiftDeviceType?
-    let displayName: String
+    private(set) var type: ZwiftDeviceType? { didSet { if type != oldValue { session.controllerIdentified(self) } } }
+    private let baseName: String
+    var displayName: String { type?.label ?? baseName }
 
     private var asyncChar: CBCharacteristic?
     private var rxChar: CBCharacteristic?
@@ -27,7 +28,7 @@ final class ZwiftControllerDevice: NSObject, DeviceHandler, CBPeripheralDelegate
     init(peripheral: CBPeripheral, type: ZwiftDeviceType?, name: String, session: Session) {
         self.peripheral = peripheral
         self.type = type
-        self.displayName = name
+        self.baseName = name
         self.session = session
         super.init()
     }

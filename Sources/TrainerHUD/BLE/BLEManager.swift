@@ -82,6 +82,7 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
             guard let role = wanted.first(where: { $0.0 == p.identifier.uuidString })?.1 else { continue }
             if discovered[p.identifier] == nil {
                 discovered[p.identifier] = DiscoveredDevice(peripheral: p, name: p.name ?? "Remembered device", rssi: 0, services: [], zwiftType: nil, lastSeen: .distantPast)
+                Log.info("Reconnecting remembered \(p.name ?? "device") [\(p.identifier.uuidString)] as \(role.label)")
             }
             connect(id: p.identifier, role: role, remember: false)
         }
@@ -147,7 +148,9 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
         case .trainer: handler = TrainerDevice(peripheral: dev.peripheral, session: session)
         case .heartRate: handler = HeartRateDevice(peripheral: dev.peripheral, session: session)
         case .powerMeter: handler = PowerMeterDevice(peripheral: dev.peripheral, session: session)
-        case .controller: handler = ZwiftControllerDevice(peripheral: dev.peripheral, type: dev.zwiftType, name: dev.name, session: session)
+        case .controller:
+            let stored = session.settings.controllerTypes[id.uuidString].flatMap { ZwiftDeviceType(rawValue: UInt8(clamping: $0)) }
+            handler = ZwiftControllerDevice(peripheral: dev.peripheral, type: dev.zwiftType ?? stored, name: dev.name, session: session)
         }
         handlers[id] = handler
         connecting.insert(id)
