@@ -39,7 +39,7 @@ Assioma PRO pedals on macOS 26. Reports from other setups are very welcome.
 ## Install
 
 ```bash
-git clone https://github.com/<you>/TrainerHUD.git
+git clone https://github.com/hugoBourretDesmarais/TrainerHUD.git
 cd TrainerHUD
 ./scripts/install.sh      # builds, copies to /Applications, launches
 ```
