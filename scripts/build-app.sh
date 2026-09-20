@@ -25,6 +25,13 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>com.hugob.TrainerHUD</string>
+      <key>CFBundleURLSchemes</key><array><string>trainerhud</string></array>
+    </dict>
+  </array>
   <key>NSBluetoothAlwaysUsageDescription</key><string>TrainerHUD connects to your smart trainer, heart rate strap, power meter and Zwift Click shifters.</string>
   <key>NSBluetoothPeripheralUsageDescription</key><string>TrainerHUD connects to your smart trainer, heart rate strap, power meter and Zwift Click shifters.</string>
 </dict>
