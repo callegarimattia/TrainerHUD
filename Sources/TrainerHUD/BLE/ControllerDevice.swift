@@ -195,6 +195,7 @@ final class ZwiftControllerDevice: NSObject, DeviceHandler, CBPeripheralDelegate
     }
 
     private func handleSync(_ d: Data) {
+        lastFrameAt = Date()
         Log.ble("\(displayName) ⇠(sync) \(d.hexString)")
         if ZwiftMessages.isRideOnResponse(d) {
             if d.count > 8 {
@@ -256,6 +257,6 @@ final class ZwiftControllerDevice: NSObject, DeviceHandler, CBPeripheralDelegate
 
     func checkStall(now: Date) -> Bool {
         guard handshakeDone else { return false }
-        return now.timeIntervalSince(lastFrameAt) > 20
+        return now.timeIntervalSince(lastFrameAt) > 45
     }
 }

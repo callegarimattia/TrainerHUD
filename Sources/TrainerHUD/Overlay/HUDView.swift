@@ -4,6 +4,7 @@ struct HUDView: View {
     @ObservedObject var state: RideState
     @ObservedObject var settings: Settings
     var controllerLabel: (String) -> String
+    private let clockTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var scale: CGFloat { CGFloat(settings.overlayScale) }
 
@@ -61,7 +62,7 @@ struct HUDView: View {
                 .strokeBorder(settings.overlayLocked ? Color.white.opacity(0.08) : Color.yellow.opacity(0.9), lineWidth: settings.overlayLocked ? 1 : 2)
         )
         .fixedSize()
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { now in
+        .onReceive(clockTimer) { now in
             clock = now
         }
     }

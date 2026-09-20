@@ -31,7 +31,7 @@ final class Session {
         for (_, c) in controllers where c.checkStall(now: now) {
             if state.controllerStatuses[c.id.uuidString] != .stalled {
                 controllerStatusChanged(c, .stalled)
-                Log.warn("\(c.displayName): no frames for 20 s (Click v2 lock, or asleep)")
+                Log.warn("\(c.displayName): no frames for 45 s (Click v2 lock, or asleep)")
             }
         }
         if state.cadence > 0, now.timeIntervalSince(lastCadenceAt) > 4 { state.updateCadence(0) }
