@@ -87,6 +87,13 @@ enum SelfTest {
         let cad = crank.update(revs: 11, time1024: 768)
         check("crank cadence 80", cad.map { abs($0 - 80) < 0.01 } ?? false, "\(String(describing: cad))")
 
+        let csc = CSCSample.parse(Data(hex: "02 64 00 00 00")!)
+        check("csc crank fields", csc?.crankRevs == 100 && csc?.crankTime == 0, "\(String(describing: csc))")
+        var cscCrank = CrankTracker()
+        _ = cscCrank.update(revs: 100, time1024: 0)
+        let cscCad = cscCrank.update(revs: 101, time1024: 768)
+        check("csc cadence 80", cscCad.map { abs($0 - 80) < 0.01 } ?? false, "\(String(describing: cscCad))")
+
         print(failures == 0 ? "ALL PASSED" : "\(failures) FAILED")
         return failures == 0
     }

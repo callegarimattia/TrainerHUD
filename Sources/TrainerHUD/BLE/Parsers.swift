@@ -8,6 +8,7 @@ enum GATT {
     static let cyclingPowerMeasurement = CBUUID(string: "2A63")
     static let csc = CBUUID(string: "1816")
     static let cscMeasurement = CBUUID(string: "2A5B")
+    static let cscFeature = CBUUID(string: "2A5C")
     static let ftms = CBUUID(string: "1826")
     static let ftmsFeature = CBUUID(string: "2ACC")
     static let indoorBikeData = CBUUID(string: "2AD2")

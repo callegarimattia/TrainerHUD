@@ -32,8 +32,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
       <key>CFBundleURLSchemes</key><array><string>trainerhud</string></array>
     </dict>
   </array>
-  <key>NSBluetoothAlwaysUsageDescription</key><string>TrainerHUD connects to your smart trainer, heart rate strap, power meter and Zwift Click shifters.</string>
-  <key>NSBluetoothPeripheralUsageDescription</key><string>TrainerHUD connects to your smart trainer, heart rate strap, power meter and Zwift Click shifters.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key><string>TrainerHUD connects to your smart trainer, heart rate strap, power meter, cadence sensor and Zwift Click shifters.</string>
+  <key>NSBluetoothPeripheralUsageDescription</key><string>TrainerHUD connects to your smart trainer, heart rate strap, power meter, cadence sensor and Zwift Click shifters.</string>
 </dict>
 </plist>
 PLIST

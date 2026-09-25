@@ -21,6 +21,12 @@ struct DiscoveredDevice {
         if services.contains(GATT.cyclingPower) {
             if !r.contains(.trainer) { r.append(.powerMeter); r.append(.trainer) } else { r.append(.powerMeter) }
         }
+        // CYCPLUS does not document its advertisement service list. Treat its
+        // name as a discovery hint only; CadenceSensorDevice validates CSC
+        // after the connection.
+        if services.contains(GATT.csc) || lower.contains("cycplus") {
+            r.append(.cadenceSensor)
+        }
         if services.contains(GATT.heartRate) { r.append(.heartRate) }
         if r.isEmpty, (services.contains(ZwiftUUID.service) || services.contains(ZwiftUUID.serviceFC82)) { r.append(.controller) }
         return r
@@ -61,9 +67,10 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
 
     func startScanning() {
         guard central.state == .poweredOn else { return }
-        let services = [GATT.ftms, GATT.cyclingPower, GATT.heartRate, GATT.csc, ZwiftUUID.service, ZwiftUUID.serviceFC82]
-        central.scanForPeripherals(withServices: services, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
-        Log.info("Scanning for sensors")
+        // CYCPLUS does not document the services in its advertisement. A
+        // broad scan lets the app find the sensor before GATT discovery.
+        central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
+        Log.info("Scanning for Bluetooth devices")
     }
 
     func stopScanning() { central.stopScan() }
@@ -75,6 +82,7 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
         if let t = s.rememberedTrainer { wanted.append((t, .trainer)) }
         if let h = s.rememberedHeartRate { wanted.append((h, .heartRate)) }
         if let p = s.rememberedPowerMeter { wanted.append((p, .powerMeter)) }
+        if let c = s.rememberedCadenceSensor { wanted.append((c, .cadenceSensor)) }
         for c in s.rememberedControllers { wanted.append((c, .controller)) }
         let ids = wanted.compactMap { UUID(uuidString: $0.0) }
         let known = central.retrievePeripherals(withIdentifiers: ids)
@@ -115,6 +123,7 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
         if s.rememberedTrainer == str { connect(id: id, role: .trainer, remember: false) }
         else if s.rememberedHeartRate == str { connect(id: id, role: .heartRate, remember: false) }
         else if s.rememberedPowerMeter == str { connect(id: id, role: .powerMeter, remember: false) }
+        else if s.rememberedCadenceSensor == str { connect(id: id, role: .cadenceSensor, remember: false) }
         else if s.rememberedControllers.contains(str) { connect(id: id, role: .controller, remember: false) }
     }
 
@@ -136,6 +145,9 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
         if roles.contains(.powerMeter), !dev.services.contains(GATT.ftms), s.rememberedPowerMeter == nil {
             connect(id: id, role: .powerMeter); return
         }
+        if roles.contains(.cadenceSensor), s.rememberedCadenceSensor == nil {
+            connect(id: id, role: .cadenceSensor); return
+        }
     }
 
     func connect(id: UUID, role: DeviceRole, remember: Bool = true) {
@@ -148,6 +160,7 @@ final class BLEManager: NSObject, CBCentralManagerDelegate {
         case .trainer: handler = TrainerDevice(peripheral: dev.peripheral, session: session)
         case .heartRate: handler = HeartRateDevice(peripheral: dev.peripheral, session: session)
         case .powerMeter: handler = PowerMeterDevice(peripheral: dev.peripheral, session: session)
+        case .cadenceSensor: handler = CadenceSensorDevice(peripheral: dev.peripheral, session: session)
         case .controller:
             let stored = session.settings.controllerTypes[id.uuidString].flatMap { ZwiftDeviceType(rawValue: UInt8(clamping: $0)) }
             handler = ZwiftControllerDevice(peripheral: dev.peripheral, type: dev.zwiftType ?? stored, name: dev.name, session: session)

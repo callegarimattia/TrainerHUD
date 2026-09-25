@@ -45,6 +45,7 @@ final class RideState: ObservableObject {
     @Published var trainerHasZwiftProtocol = false
     @Published var heartRateStatus: ConnectionStatus = .disconnected
     @Published var powerMeterStatus: ConnectionStatus = .disconnected
+    @Published var cadenceSensorStatus: ConnectionStatus = .disconnected
     @Published var controllerStatuses: [String: ConnectionStatus] = [:]
     @Published var controllerBattery: [String: Int] = [:]
     @Published var bluetoothOn = false

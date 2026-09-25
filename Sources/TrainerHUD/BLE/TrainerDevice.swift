@@ -2,13 +2,14 @@ import Foundation
 import CoreBluetooth
 
 enum DeviceRole: String, Codable, CaseIterable {
-    case trainer, heartRate, powerMeter, controller
+    case trainer, heartRate, powerMeter, cadenceSensor, controller
 
     var label: String {
         switch self {
         case .trainer: return "Trainer"
         case .heartRate: return "Heart rate"
         case .powerMeter: return "Power meter"
+        case .cadenceSensor: return "Cadence sensor"
         case .controller: return "Shifter / controller"
         }
     }

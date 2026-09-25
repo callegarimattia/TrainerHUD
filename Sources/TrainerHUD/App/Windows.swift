@@ -227,6 +227,7 @@ struct SettingsView: View {
                     settings.rememberedTrainer = nil
                     settings.rememberedHeartRate = nil
                     settings.rememberedPowerMeter = nil
+                    settings.rememberedCadenceSensor = nil
                     settings.rememberedControllers = []
                 }
             }

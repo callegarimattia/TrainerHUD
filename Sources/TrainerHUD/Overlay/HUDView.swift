@@ -201,6 +201,7 @@ struct HUDView: View {
             statusLine(state.trainerHasZwiftProtocol ? "Trainer · VS" : "Trainer", state.trainerStatus)
             statusLine("HR", state.heartRateStatus)
             if state.powerMeterStatus != .disconnected { statusLine("Pedals", state.powerMeterStatus) }
+            if state.cadenceSensorStatus != .disconnected { statusLine("Cadence", state.cadenceSensorStatus) }
             ForEach(state.controllerStatuses.keys.sorted(), id: \.self) { id in
                 let bat = state.controllerBattery[id].map { " \($0)%" } ?? ""
                 statusLine(controllerLabel(id) + bat, state.controllerStatuses[id] ?? .disconnected)

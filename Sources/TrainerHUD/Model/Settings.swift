@@ -102,6 +102,7 @@ final class Settings: ObservableObject {
     @Published var rememberedTrainer: String? { didSet { save() } }
     @Published var rememberedHeartRate: String? { didSet { save() } }
     @Published var rememberedPowerMeter: String? { didSet { save() } }
+    @Published var rememberedCadenceSensor: String? { didSet { save() } }
     @Published var rememberedControllers: [String] { didSet { save() } }
     @Published var controllerTypes: [String: Int] { didSet { save() } }
 
@@ -162,6 +163,7 @@ final class Settings: ObservableObject {
         rememberedTrainer = d.string(forKey: "rememberedTrainer")
         rememberedHeartRate = d.string(forKey: "rememberedHeartRate")
         rememberedPowerMeter = d.string(forKey: "rememberedPowerMeter")
+        rememberedCadenceSensor = d.string(forKey: "rememberedCadenceSensor")
         rememberedControllers = d.stringArray(forKey: "rememberedControllers") ?? []
         controllerTypes = (d.dictionary(forKey: "controllerTypes") as? [String: Int]) ?? [:]
         loading = false
@@ -213,6 +215,7 @@ final class Settings: ObservableObject {
         d.set(rememberedTrainer, forKey: "rememberedTrainer")
         d.set(rememberedHeartRate, forKey: "rememberedHeartRate")
         d.set(rememberedPowerMeter, forKey: "rememberedPowerMeter")
+        d.set(rememberedCadenceSensor, forKey: "rememberedCadenceSensor")
         d.set(rememberedControllers, forKey: "rememberedControllers")
         d.set(controllerTypes, forKey: "controllerTypes")
     }

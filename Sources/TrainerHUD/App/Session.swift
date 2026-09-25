@@ -12,6 +12,7 @@ final class Session {
     private var pedalPowerAt = Date.distantPast
     private var trainerPowerAt = Date.distantPast
     private var lastTrainerSpeedAt = Date.distantPast
+    private var cadenceSensorAt = Date.distantPast
     var onDevicesChanged: (() -> Void)?
 
     init() {
@@ -143,6 +144,7 @@ final class Session {
         case .trainer: settings.rememberedTrainer = s
         case .heartRate: settings.rememberedHeartRate = s
         case .powerMeter: settings.rememberedPowerMeter = s
+        case .cadenceSensor: settings.rememberedCadenceSensor = s
         case .controller: if !settings.rememberedControllers.contains(s) { settings.rememberedControllers.append(s) }
         }
     }
@@ -152,6 +154,7 @@ final class Session {
         if settings.rememberedTrainer == s { settings.rememberedTrainer = nil }
         if settings.rememberedHeartRate == s { settings.rememberedHeartRate = nil }
         if settings.rememberedPowerMeter == s { settings.rememberedPowerMeter = nil }
+        if settings.rememberedCadenceSensor == s { settings.rememberedCadenceSensor = nil }
         settings.rememberedControllers.removeAll { $0 == s }
     }
 
@@ -166,6 +169,7 @@ final class Session {
             state.controllerStatuses[id.uuidString] = .connecting
         case is HeartRateDevice: state.heartRateStatus = .connecting
         case is PowerMeterDevice: state.powerMeterStatus = .connecting
+        case is CadenceSensorDevice: state.cadenceSensorStatus = .connecting
         default: break
         }
     }
@@ -176,6 +180,7 @@ final class Session {
         case is ZwiftControllerDevice: state.controllerStatuses[id.uuidString] = .connected
         case is HeartRateDevice: state.heartRateStatus = .ready
         case is PowerMeterDevice: state.powerMeterStatus = .ready
+        case is CadenceSensorDevice: state.cadenceSensorStatus = .connected
         default: break
         }
     }
@@ -188,6 +193,9 @@ final class Session {
         case is ZwiftControllerDevice: state.controllerStatuses[id.uuidString] = .connecting
         case is HeartRateDevice: state.heartRateStatus = .connecting; state.heartRate = 0
         case is PowerMeterDevice: state.powerMeterStatus = .connecting
+        case is CadenceSensorDevice:
+            cadenceSensorAt = .distantPast
+            state.cadenceSensorStatus = .connecting
         default: break
         }
     }
@@ -205,6 +213,9 @@ final class Session {
             state.controllerBattery[id.uuidString] = nil
         case is HeartRateDevice: state.heartRateStatus = .disconnected; state.heartRate = 0
         case is PowerMeterDevice: state.powerMeterStatus = .disconnected
+        case is CadenceSensorDevice:
+            cadenceSensorAt = .distantPast
+            state.cadenceSensorStatus = .disconnected
         default: break
         }
     }
@@ -229,11 +240,13 @@ final class Session {
     func trainerReport(power: Int?, cadence: Int?, speedKmh: Double?, resistance: Int?, source: String) {
         if state.trainerStatus == .connected { state.trainerStatus = .ready }
         let pedalsFresh = Date().timeIntervalSince(pedalPowerAt) < 3
+        let cadenceSensorFresh = Date().timeIntervalSince(cadenceSensorAt) < 3
         if let power, !(settings.preferPedalsForPower && pedalsFresh) {
             trainerPowerAt = Date()
             state.updatePower(power, source: "trainer")
         }
-        if let cadence, !(settings.preferPedalsForPower && pedalsFresh && source != "ftms") {
+        if let cadence, !cadenceSensorFresh,
+           !(settings.preferPedalsForPower && pedalsFresh && source != "ftms") {
             lastCadenceAt = Date()
             state.updateCadence(cadence)
         }
@@ -251,7 +264,9 @@ final class Session {
         }
         if Date().timeIntervalSince(trainerPowerAt) > 2, Date().timeIntervalSince(pedalPowerAt) > 2 {
             if let p = t.power { state.updatePower(p, source: "zwift") }
-            if let c = t.cadence { lastCadenceAt = Date(); state.updateCadence(c) }
+            if let c = t.cadence, Date().timeIntervalSince(cadenceSensorAt) >= 3 {
+                lastCadenceAt = Date(); state.updateCadence(c)
+            }
         }
     }
 
@@ -259,8 +274,21 @@ final class Session {
         pedalPowerAt = Date()
         if settings.preferPedalsForPower || Date().timeIntervalSince(trainerPowerAt) > 3 {
             state.updatePower(power, source: "pedals")
-            if let cadence { lastCadenceAt = Date(); state.updateCadence(cadence) }
+            if let cadence, Date().timeIntervalSince(cadenceSensorAt) >= 3 {
+                lastCadenceAt = Date(); state.updateCadence(cadence)
+            }
         }
+    }
+
+    func cadenceSensorReport(cadence: Int) {
+        cadenceSensorAt = Date()
+        lastCadenceAt = cadenceSensorAt
+        state.cadenceSensorStatus = .ready
+        state.updateCadence(cadence)
+    }
+
+    func cadenceSensorValidation(crankSupported: Bool) {
+        state.cadenceSensorStatus = crankSupported ? .ready : .stalled
     }
 
     func heartRateReport(bpm: Int) {
